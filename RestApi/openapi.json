@@ -1,0 +1,176 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Modbus Bridge API",
+    "version": "1.0.0",
+    "description": "Manage Modbus TCP connections and read holding registers."
+  },
+  "tags": [
+    {
+      "name": "modbusclient",
+      "description": "Connect to, list, and disconnect Modbus TCP clients."
+    },
+    {
+      "name": "measurement",
+      "description": "Read holding-register values from a connected Modbus slave."
+    }
+  ],
+  "paths": {
+    "/connections": {
+      "get": {
+        "tags": ["modbusclient"],
+        "summary": "List connected Modbus slaves",
+        "responses": {
+          "200": {
+            "description": "Connected slave IP addresses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connections": {
+                      "type": "array",
+                      "items": {"type": "string", "format": "ip"}
+                    }
+                  },
+                  "required": ["connections"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["modbusclient"],
+        "summary": "Connect to a Modbus TCP slave",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["ip_address"],
+                "properties": {
+                  "ip_address": {"type": "string", "format": "ip"}
+                }
+              },
+              "example": {"ip_address": "192.168.86.50"}
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Connection established"},
+          "200": {"description": "Already connected to this slave"},
+          "400": {"description": "Invalid request or IP address"},
+          "502": {"description": "Could not connect to the slave"}
+        }
+      }
+    },
+    "/connections/{ip_address}": {
+      "delete": {
+        "tags": ["modbusclient"],
+        "summary": "Disconnect from a Modbus TCP slave",
+        "parameters": [
+          {
+            "name": "ip_address",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "ip"}
+          }
+        ],
+        "responses": {
+          "200": {"description": "Disconnected"},
+          "400": {"description": "Invalid IP address"},
+          "404": {"description": "No connection exists for this address"}
+        }
+      }
+    },
+    "/measurements/{ip_address}": {
+      "post": {
+        "tags": ["measurement"],
+        "summary": "Read holding registers from a connected slave",
+        "parameters": [
+          {
+            "name": "ip_address",
+            "in": "path",
+            "required": true,
+            "schema": {"type": "string", "format": "ip"}
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["address", "count"],
+                "properties": {
+                  "address": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65535
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 125
+                  },
+                  "device_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 247,
+                    "default": 1
+                  }
+                }
+              },
+              "example": {"address": 0, "count": 2, "device_id": 1}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Raw holding register values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ip_address",
+                    "address",
+                    "count",
+                    "device_id",
+                    "value"
+                  ],
+                  "properties": {
+                    "ip_address": {"type": "string", "format": "ip"},
+                    "address": {"type": "integer"},
+                    "count": {"type": "integer"},
+                    "device_id": {"type": "integer"},
+                    "value": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 65535
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "ip_address": "192.168.86.50",
+                  "address": 0,
+                  "count": 2,
+                  "device_id": 1,
+                  "value": [123, 456]
+                }
+              }
+            }
+          },
+          "400": {"description": "Invalid request or register range"},
+          "404": {"description": "No connection exists for this address"},
+          "502": {"description": "Modbus read failed"}
+        }
+      }
+    }
+  }
+}
