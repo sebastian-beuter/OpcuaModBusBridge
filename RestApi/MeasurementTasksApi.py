@@ -40,6 +40,15 @@ def trigger_measurement(ip_address: str):
         logger.exception("Could not read Modbus registers from %s", ip_address)
         return jsonify({"error": f"Could not read registers from {ip_address}: {error}"}), 502
 
+    decoded_values: dict[str, float] = {}
+    request_end = address + count
+    for name, first_register in (("voltage", 0), ("current", 2)):
+        if address <= first_register and request_end >= first_register + 2:
+            offset = first_register - address
+            decoded_values[name] = ModBusClientManager.decode_float_registers(
+                values[offset : offset + 2]
+            )
+
     return jsonify(
         {
             "ip_address": ip_address,
@@ -47,6 +56,7 @@ def trigger_measurement(ip_address: str):
             "count": count,
             "device_id": device_id,
             "value": values,
+            "decoded_values": decoded_values,
         }
     )
 

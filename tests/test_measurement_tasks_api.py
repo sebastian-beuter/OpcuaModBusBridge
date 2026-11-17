@@ -32,6 +32,7 @@ class MeasurementTasksApiTests(unittest.TestCase):
                 "count": 2,
                 "device_id": 7,
                 "value": [123, 456],
+                "decoded_values": {},
             },
         )
         self.clients.read_holding_registers.assert_called_once_with(
@@ -52,12 +53,44 @@ class MeasurementTasksApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["device_id"], 1)
         self.assertEqual(response.json["value"], [321])
+        self.assertEqual(response.json["decoded_values"], {})
         self.clients.read_holding_registers.assert_called_once_with(
             "192.168.86.50",
             address=3,
             count=1,
             device_id=1,
         )
+
+    def test_measurement_decodes_arduino_voltage_and_current_registers(self):
+        self.clients.read_holding_registers.return_value = [
+            0x4140,
+            0x0000,
+            0x3FC0,
+            0x0000,
+        ]
+
+        response = self.api.post(
+            "/measurements/192.168.86.50",
+            json={"address": 0, "count": 4},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["value"], [0x4140, 0, 0x3FC0, 0])
+        self.assertEqual(
+            response.json["decoded_values"],
+            {"voltage": 12.0, "current": 1.5},
+        )
+
+    def test_measurement_decodes_voltage_when_only_voltage_registers_are_read(self):
+        self.clients.read_holding_registers.return_value = [0x4140, 0x0000]
+
+        response = self.api.post(
+            "/measurements/192.168.86.50",
+            json={"address": 0, "count": 2},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["decoded_values"], {"voltage": 12.0})
 
     def test_missing_or_non_integer_parameters_return_bad_request(self):
         responses = [

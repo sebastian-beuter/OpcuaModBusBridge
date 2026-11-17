@@ -1,5 +1,6 @@
 import ipaddress
 import logging
+import struct
 from threading import RLock
 
 from pymodbus.client import ModbusTcpClient
@@ -65,6 +66,13 @@ class ModBusClientManager:
     def connected_ips(self) -> list[str]:
         with self._lock:
             return sorted(self._clients)
+
+    @staticmethod
+    def decode_float_registers(registers: list[int]) -> float:
+        if len(registers) != 2:
+            raise ValueError("A 32-bit float requires exactly two registers")
+
+        return struct.unpack(">f", struct.pack(">HH", *registers))[0]
 
     def read_holding_registers(
         self,

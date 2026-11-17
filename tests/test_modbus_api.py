@@ -90,6 +90,7 @@ class ModbusApiTests(unittest.TestCase):
                 "count": 2,
                 "device_id": 1,
                 "value": [123, 456],
+                "decoded_values": {},
             },
         )
         self.client.read_holding_registers.assert_called_once_with(

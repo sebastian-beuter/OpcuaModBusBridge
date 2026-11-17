@@ -68,5 +68,22 @@ The response body contains the raw register values in `value`:
 }
 ```
 
+The Arduino example stores voltage in registers `0`-`1` and current in
+registers `2`-`3`, with each IEEE 754 float sent high-word first. To read both
+measurements, request `{"address": 0, "count": 4}`. The response retains the
+raw register list in `value` and adds decoded float values in `decoded_values`:
+
+```json
+{
+  "address": 0,
+  "count": 4,
+  "value": [16704, 0, 16320, 0],
+  "decoded_values": {
+    "voltage": 12.0,
+    "current": 1.5
+  }
+}
+```
+
 The endpoint returns `400` for invalid parameters, `404` if the slave is not
 connected, and `502` if the Modbus read fails.
